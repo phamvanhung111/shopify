@@ -103,44 +103,45 @@ class ProductsTable extends React.Component {
     this.queryTimerID = null;
   }
 
-  handleEmailChange = (value) => {
+  handleEmailInputChange = (value) => {
     this.setState({ email: value });
   };
 
-  handleSendEmail = async () => {
+  sendEmailNotification = async () => {
     const { email } = this.state;
-    const productsToNotify = this.products.filter(
+    const productsOutOfStock = this.products.filter(
       (product) => product.totalInventory === 0
     );
-    if (productsToNotify.length > 0 && email) {
+    if (productsOutOfStock.length > 0 && email) {
       try {
         await axios.post("/api/send-email", {
           email,
-          products: productsToNotify,
+          products: productsOutOfStock,
         });
         this.setState({ emailSent: true });
       } catch (error) {
         console.error("Error sending email:", error);
       }
     } else {
-      console.log("Hello World!!", email, this.products);
+      console.log("No out-of-stock products or email not provided", email, this.products);
       this.setState({ emailSent: false });
     }
   };
+
   handleScheduleChange = (value) => {
     this.setState({ schedule: value });
   };
 
-  handleSetSchedule = async () => {
+  setEmailSchedule = async () => {
     const { email, schedule } = this.state;
-    const productsToNotify = this.products.filter(
+    const productsOutOfStock = this.products.filter(
       (product) => product.totalInventory === 0
     );
-    if (productsToNotify.length > 0 && email && schedule) {
+    if (productsOutOfStock.length > 0 && email && schedule) {
       try {
         await axios.post("/api/schedule-email", {
           email,
-          products: productsToNotify,
+          products: productsOutOfStock,
           schedule,
         });
         this.setState({ emailSent: true });
@@ -150,21 +151,180 @@ class ProductsTable extends React.Component {
     }
   };
 
-  render() {
-    const { schedule } = this.state;
-    const app = this.context;
-    const redirectToProduct = (gid) => {
-      const redirect = Redirect.create(app);
-      const id = gid.substring(gid.lastIndexOf("/") + 1);
-      redirect.dispatch(Redirect.Action.ADMIN_SECTION, {
-        name: Redirect.ResourceType.Product,
-        resource: {
-          id: id,
-        },
-      });
-    };
+  updateProductQuery = () => {
+    this.setState({ query: this.state.queryValue });
+  };
 
-    const { email, emailSent } = this.state;
+  handleQueryChange = (value) => {
+    if (this.queryTimerID != null) {
+      clearTimeout(this.queryTimerID);
+      this.queryTimerID = null;
+    }
+    this.queryTimerID = setTimeout(() => {
+      this.queryTimerID = null;
+      this.updateProductQuery();
+    }, 500);
+    this.setState({ queryValue: value });
+  };
+
+  clearQuery = () => {
+    this.setState({ queryValue: null });
+    setTimeout(() => this.updateProductQuery(), 100);
+  };
+
+  handleSortChange = (index, direction) => {
+    let sortKey = "TITLE";
+    switch (index) {
+      case 3:
+        sortKey = "INVENTORY_TOTAL";
+        break;
+      case 4:
+        sortKey = "PRODUCT_TYPE";
+        break;
+      case 5:
+        sortKey = "VENDOR";
+        break;
+      default:
+        sortKey = "TITLE";
+    }
+    const reverse = direction === "descending";
+    this.setState({
+      sortKey: sortKey,
+      reverse: reverse,
+      sortColumnIndex: index,
+      sortDirection: direction,
+    });
+  };
+
+  toggleProductSelection = (isSelected, id) => {
+    this.setState((prevState) => ({
+      selectedItems: isSelected
+        ? prevState.selectedItems.concat([id])
+        : prevState.selectedItems.filter((item) => item !== id),
+    }));
+  };
+
+  selectAllProducts = (isSelected) => {
+    this.setState({
+      selectedItems: isSelected
+        ? this.products.map((product) => product.id)
+        : [],
+    });
+  };
+
+  toggleDescriptions = () => {
+    this.setState({ showDescriptions: !this.state.showDescriptions });
+  };
+
+  redirectToProduct = (gid) => {
+    const app = this.context;
+    const redirect = Redirect.create(app);
+    const id = gid.substring(gid.lastIndexOf("/") + 1);
+    redirect.dispatch(Redirect.Action.ADMIN_SECTION, {
+      name: Redirect.ResourceType.Product,
+      resource: { id },
+    });
+  };
+
+  renderLoadingState = () => (
+    <Fragment>
+      <Loading />
+      <Card.Section>
+        <SkeletonBodyText lines={2} />
+      </Card.Section>
+      <Card.Section>
+        <SkeletonBodyText lines={2} />
+      </Card.Section>
+      <Card.Section>
+        <SkeletonBodyText lines={2} />
+      </Card.Section>
+    </Fragment>
+  );
+
+  renderTable = (rows, descriptions) => (
+    <div className="data-table">
+      <SettingToggle
+        action={{
+          content: this.state.showDescriptions
+            ? "Hide Descriptions"
+            : "Show Descriptions",
+          onAction: this.toggleDescriptions,
+        }}
+        enabled={this.state.showDescriptions}
+      >
+        {this.state.selectedItems.length === 0
+          ? `Showing ${descriptions.length} ${descriptions.length > 1 ? "products" : "product"
+          }.`
+          : `${this.state.selectedItems.length} of ${descriptions.length} ${descriptions.length > 1 ? "products" : "product"
+          } selected.`}
+        <br />
+        Product descriptions are{" "}
+        {this.state.showDescriptions
+          ? "being displayed below each product row"
+          : "hidden"}
+        .
+      </SettingToggle>
+      <DataTableWithProductDescription
+        columnContentTypes={[
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+        ]}
+        headings={[
+          <Tooltip content="Select all products" preferredPosition="above">
+            <Button
+              size="slim"
+              disclosure
+              onClick={() =>
+                this.selectAllProducts(
+                  !(this.state.selectedItems.length === this.products.length)
+                )
+              }
+            >
+              <Checkbox
+                label="Select all Products"
+                labelHidden={true}
+                id="selectAllProducts"
+                checked={this.areAllProductsSelected()}
+                onChange={this.selectAllProducts}
+              />
+            </Button>
+          </Tooltip>,
+          "",
+          "Product",
+          "Inventory",
+          "Type",
+          "Vendor",
+          "Tags",
+        ]}
+        rows={rows}
+        descriptions={descriptions}
+        verticalAlign="middle"
+        sortable={[false, false, true, true, true, true, false]}
+        defaultSortDirection={this.state.sortDirection}
+        initialSortColumnIndex={this.state.sortColumnIndex}
+        showDescriptions={this.state.showDescriptions}
+        onSort={this.handleSortChange}
+      />
+    </div>
+  );
+
+  areAllProductsSelected = () => {
+    if (this.state.selectedItems.length === 0) {
+      return false;
+    } else if (this.state.selectedItems.length === this.products.length) {
+      return true;
+    } else {
+      return "indeterminate";
+    }
+  };
+
+  render() {
+    const { schedule, email, emailSent } = this.state;
 
     return (
       <Card>
@@ -172,22 +332,22 @@ class ProductsTable extends React.Component {
           <Filters
             queryValue={this.state.queryValue}
             filters={[]}
-            onQueryChange={this.handleFiltersQueryChange}
-            onQueryClear={this.handleQueryValueRemove}
+            onQueryChange={this.handleQueryChange}
+            onQueryClear={this.clearQuery}
           />
         </Card.Section>
         <Card.Section>
           <TextField
             label="Notification Email"
             value={email}
-            onChange={(value) => this.handleEmailChange(value)}
+            onChange={this.handleEmailInputChange}
             type="email"
             placeholder="Enter email to receive notifications"
           />
           <Select
             label="Schedule"
             options={[
-              { label: "Miunets", value: "* * * * *" },
+              { label: "Minutes", value: "* * * * *" },
               { label: "Hourly", value: "0 * * * *" },
               { label: "Daily", value: "0 0 * * *" },
               { label: "Weekly", value: "0 0 * * 0" },
@@ -195,7 +355,7 @@ class ProductsTable extends React.Component {
             value={schedule}
             onChange={this.handleScheduleChange}
           />
-          <Button onClick={this.handleSetSchedule} primary>
+          <Button onClick={this.setEmailSchedule} primary>
             Set Schedule
           </Button>
           {emailSent ? (
@@ -229,7 +389,7 @@ class ProductsTable extends React.Component {
           }}
         >
           {({ data, loading, error, fetchMore }) => {
-            if (loading) return this.loadingLayout();
+            if (loading) return this.renderLoadingState();
             if (error) {
               console.log(error);
               return <div>{error.message}</div>;
@@ -241,7 +401,7 @@ class ProductsTable extends React.Component {
                 labelHidden={true}
                 id={product.id}
                 checked={this.state.selectedItems.includes(product.id)}
-                onChange={this.handleSelection}
+                onChange={this.toggleProductSelection}
               />,
               <Thumbnail
                 source={
@@ -256,7 +416,7 @@ class ProductsTable extends React.Component {
                 }
                 size="large"
               />,
-              <Button plain onClick={() => redirectToProduct(product.id)}>
+              <Button plain onClick={() => this.redirectToProduct(product.id)}>
                 <TextStyle variation="strong">{product.title}</TextStyle>
               </Button>,
               <span>
@@ -281,7 +441,7 @@ class ProductsTable extends React.Component {
             );
             return (
               <Fragment>
-                {this.dataTableLayout(rows, descriptions)}
+                {this.renderTable(rows, descriptions)}
                 <Pagination
                   hasNext={data.products.pageInfo.hasNextPage}
                   hasPrevious={data.products.pageInfo.hasPreviousPage}
@@ -333,176 +493,6 @@ class ProductsTable extends React.Component {
       </Card>
     );
   }
-
-  loadingLayout() {
-    return (
-      <Fragment>
-        <Loading />
-        <Card.Section>
-          <SkeletonBodyText lines={2} />
-        </Card.Section>
-        <Card.Section>
-          <SkeletonBodyText lines={2} />
-        </Card.Section>
-        <Card.Section>
-          <SkeletonBodyText lines={2} />
-        </Card.Section>
-      </Fragment>
-    );
-  }
-
-  dataTableLayout(rows, descriptions) {
-    return (
-      <div className="data-table">
-        <SettingToggle
-          action={{
-            content: this.state.showDescriptions
-              ? "Hide Descriptions"
-              : "Show Descriptions",
-            onAction: this.toggleShowDescriptions,
-          }}
-          enabled={this.state.showDescriptions}
-        >
-          {this.state.selectedItems.length == 0
-            ? `Showing ${descriptions.length} ${descriptions.length > 1 ? "products" : "product"
-            }.`
-            : `${this.state.selectedItems.length} of ${descriptions.length} ${descriptions.length > 1 ? "products" : "product"
-            } selected.`}
-          <br />
-          Product descriptions are{" "}
-          {this.state.showDescriptions
-            ? "being displayed below each product row"
-            : "hidden"}
-          .
-        </SettingToggle>
-        <DataTableWithProductDescription
-          columnContentTypes={[
-            "text",
-            "text",
-            "text",
-            "text",
-            "text",
-            "text",
-            "text",
-          ]}
-          headings={[
-            <Tooltip content="Select all products" preferredPosition="above">
-              <Button
-                size="slim"
-                disclosure
-                onClick={() =>
-                  this.handleSelectAll(
-                    !(this.state.selectedItems.length == this.products.length)
-                  )
-                }
-              >
-                <Checkbox
-                  label="Select all Products"
-                  labelHidden={true}
-                  id="selectAllProducts"
-                  checked={this.isSelectAll()}
-                  onChange={this.handleSelectAll}
-                />
-              </Button>
-            </Tooltip>,
-            "",
-            "Product",
-            "Inventory",
-            "Type",
-            "Vendor",
-            "Tags",
-          ]}
-          rows={rows}
-          descriptions={descriptions}
-          verticalAlign="middle"
-          sortable={[false, false, true, true, true, true, false]}
-          defaultSortDirection={this.state.sortDirection}
-          initialSortColumnIndex={this.state.sortColumnIndex}
-          showDescriptions={this.state.showDescriptions}
-          onSort={this.handleSort}
-        />
-      </div>
-    );
-  }
-
-  isSelectAll() {
-    if (this.state.selectedItems.length == 0) {
-      return false;
-    } else if (this.state.selectedItems.length == this.products.length) {
-      return true;
-    } else {
-      return "indeterminate";
-    }
-  }
-
-  updateQuery() {
-    this.setState({ query: this.state.queryValue });
-  }
-
-  handleFiltersQueryChange = (value) => {
-    if (this.queryTimerID != null) {
-      clearTimeout(this.queryTimerID);
-      this.queryTimerID = null;
-    }
-    this.queryTimerID = setTimeout(() => {
-      this.queryTimerID = null;
-      this.updateQuery();
-    }, 500);
-    this.setState({ queryValue: value });
-  };
-
-  handleQueryValueRemove = () => {
-    this.setState({ queryValue: null });
-    setTimeout(() => this.updateQuery(), 100);
-  };
-
-  handleSort = (index, direction) => {
-    let sortKey = "TITLE";
-    switch (index) {
-      case 3:
-        sortKey = "INVENTORY_TOTAL";
-        break;
-      case 4:
-        sortKey = "PRODUCT_TYPE";
-        break;
-      case 5:
-        sortKey = "VENDOR";
-        break;
-      default:
-        sortKey = "TITLE";
-    }
-    const reverse = direction === "descending";
-    this.setState({
-      sortKey: sortKey,
-      reverse: reverse,
-      sortColumnIndex: index,
-      sortDirection: direction,
-    });
-  };
-
-  handleSelection = (newChecked, id) => {
-    if (newChecked) {
-      this.setState({ selectedItems: this.state.selectedItems.concat([id]) });
-    } else {
-      this.setState({
-        selectedItems: this.state.selectedItems.filter((item) => item !== id),
-      });
-    }
-  };
-
-  handleSelectAll = (newChecked) => {
-    if (newChecked) {
-      this.setState({
-        selectedItems: this.products.map((product) => product.id),
-      });
-    } else {
-      this.setState({ selectedItems: [] });
-    }
-  };
-
-  toggleShowDescriptions = () => {
-    this.setState({ showDescriptions: !this.state.showDescriptions });
-  };
 }
 
 function DataTableWithProductDescription(props) {
@@ -512,7 +502,7 @@ function DataTableWithProductDescription(props) {
   table.defaultRenderRow = (row, index) => {
     const defaultRow = parentDefaultRenderRow(row, index);
     const descriptionRow = table.props.showDescriptions && (
-      <tr key={`row-${index}-desc`} className="Polaris-DataTable__TableRow">
+      <tr key={`row-${index}-desc`} className="Polaris-DataTable__TableRow" style={{ border: '3px solid black' }}>
         <td
           key={`row-${index}-desc-col-1`}
           className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignMiddle"

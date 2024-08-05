@@ -1,9 +1,4 @@
-/*
- * Demo Products dispay table.
- * Features:
- * - Sorting by title, type, vendor
- * - Row rendering is customized to display product descriptions on a second line
- */
+
 import { Fragment } from 'react';
 import {
     DataTable,
@@ -15,14 +10,6 @@ import {
 import { Redirect } from '@shopify/app-bridge/actions';
 import { Context } from '@shopify/app-bridge-react';
 
-/**
- * Props:
- * This function customizes the default product rendering to optionally display
- * a second row with each product's description.
- * - All those from DataTable
- * - showDescriptions: boolean
- * - descriptions: array
- */
 function DataTableWithProductDescription(props) {
     const DataTableInner = DataTable(props).type;
     const table = new DataTableInner(props);
@@ -42,17 +29,6 @@ function DataTableWithProductDescription(props) {
     return table;
 }
 
-/**
- * Props:
- * The main Product display table.
- * It displays only the products selected on the ProductsTable (see index.js).
- * - products: array
- * - sortDirection: string
- * - sortColumnIndex: number
- * - showDescriptions: boolean
- * - onSort: function(number, string)
- * - onToggleDescriptions: function(boolean)
- */
 class ProductsPreviewTable extends React.Component {
     static contextType = Context;
     constructor(props) {

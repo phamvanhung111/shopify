@@ -1,26 +1,14 @@
-/*
- * Demo Shopify Product search and selection page.
- * Features:
- * - Sorting by title, inventory, type, vendor
- * - Text-based filtering
- * - Multiple selection
- * - Row rendering is customized to display product descriptions on a second line
- * - Uses the GraphQL API to retrieve product data
- * Author: Gustavo Tondello (https://github.com/gtondello)
- */
+
 import gql from "graphql-tag";
 import { Query } from "react-apollo";
 import {
   Layout,
   Page,
-  TextStyle,
-  Button,
   SkeletonBodyText,
 } from "@shopify/polaris";
-import ProductsTable from "../components/ProductsTable";
-import ProductsSelectionReview from "../components/ProductsSelectionReview";
+import ProductsTable from "../../components/ProductsTable";
 import { Context, Loading } from "@shopify/app-bridge-react";
-import { withApollo } from "../lib/apollo";
+import { withApollo } from "../../lib/apollo";
 
 const GET_ALL_COLLECTIONS = gql`
   query getCollections {

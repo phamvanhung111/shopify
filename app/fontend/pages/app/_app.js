@@ -7,7 +7,7 @@ import translations from '@shopify/polaris/locales/en.json';
 import Cookies from 'js-cookie';
 
 import '@shopify/polaris/styles.css';
-import '../css/data-table.css';
+import './data-table.css';
 
 // Application headers and configuration
 class MyApp extends App {
@@ -15,17 +15,20 @@ class MyApp extends App {
         const { Component, pageProps } = this.props;
         const config = { apiKey: API_KEY, shopOrigin: Cookies.get("shopOrigin"), forceRedirect: true };
         return (
-            <React.Fragment>
-                <Head>
-                    <title>Sample Shopify Product Search App</title>
-                    <meta charSet="utf-8" />
-                </Head>
-                <Provider config={config}>
-                    <AppProvider i18n={translations}>
-                        <Component {...pageProps} />
-                    </AppProvider>
-                </Provider>
-            </React.Fragment>
+            <div style={{ backgroundColor: 'lightblue' }}>
+                <React.Fragment>
+                    <Head>
+                        <title>Sample Shopify Product Search App</title>
+                        <meta charSet="utf-8" />
+                    </Head>
+                    <Provider config={config}>
+                        <AppProvider i18n={translations}>
+                            <Component {...pageProps} />
+                        </AppProvider>
+                    </Provider>
+                </React.Fragment>
+            </div>
+
         );
     }
 }

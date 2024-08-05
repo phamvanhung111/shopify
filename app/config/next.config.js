@@ -2,7 +2,7 @@ require("dotenv").config();
 const withCSS = require("@zeit/next-css");
 const webpack = require("webpack");
 
-const apiKey = JSON.stringify(process.env.SHOPIFY_API_KEY);
+const apiKey = JSON.stringify(process.env.CLIENT_ID);
 const host = JSON.stringify(process.env.HOST);
 
 module.exports = withCSS({

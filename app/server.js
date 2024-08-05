@@ -23,19 +23,19 @@ const bodyParser = require("koa-bodyparser");
 const sendEmail = require("./server/sendEmail");
 const cron = require('node-cron');
 
-const { SHOPIFY_API_SECRET_KEY, SHOPIFY_API_KEY, API_VERSION } = process.env;
+const { CLIENT_SECRET, CLIENT_ID, API_VERSION } = process.env;
 
 app.prepare().then(() => {
   const server = new Koa();
   const router = new Router();
   server.use(session({ secure: true, sameSite: "none" }, server));
-  server.keys = [SHOPIFY_API_SECRET_KEY];
+  server.keys = [CLIENT_SECRET];
 
   // Shop authentication and app subscription
   server.use(
     createShopifyAuth({
-      apiKey: SHOPIFY_API_KEY,
-      secret: SHOPIFY_API_SECRET_KEY,
+      apiKey: CLIENT_ID,
+      secret: CLIENT_SECRET,
       scopes: ["read_products", "write_products"],
       async afterAuth(ctx) {
         const { shop, accessToken } = ctx.session;
@@ -59,21 +59,6 @@ app.prepare().then(() => {
     });
   };
 
-  // Routes setup
-
-  // router.post("/api/send-email", async (ctx) => {
-  //   try {
-  //     const { email, products } = ctx.request.body;
-  //     await sendEmail(email, products);
-  //     ctx.status = 200;
-  //     ctx.body = "Email sent successfully";
-  //   } catch (error) {
-  //     console.error("Error sending email:", error);
-  //     ctx.status = 500;
-  //     ctx.body = "Error sending email";
-  //   }
-  // });
-  // Add an endpoint to set up the schedule
   router.post("/api/schedule-email", async (ctx) => {
     const { email, products, schedule } = ctx.request.body;
     // Example cronExpression for hourly: '0 * * * *', daily: '0 0 * * *', weekly: '0 0 * * 0'

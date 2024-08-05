@@ -1,27 +1,17 @@
-/*
- * Apollo next.js HOC
- * (based on next.js withApollo example)
- */
+
 import React from 'react';
 import App from 'next/app';
 import { ApolloProvider } from '@apollo/react-hooks';
 import createApolloClient from './apollo-client';
 
-// On the client we store the apollo client in the following variable
-// this prevents the client from reinitializing between page transitions.
 let globalApolloClient = null;
 
 /**
- * Installes the apollo client on NextPageContext
- * or NextAppContext. Useful if you want to use apolloClient
- * inside getStaticProps, getStaticPaths or getServerProps
  * @param {NextPageContext | NextAppContext} ctx
  */
 export const initOnContext = ctx => {
     const inAppContext = Boolean(ctx.ctx);
 
-    // We consider installing `withApollo({ ssr: true })` on global App level
-    // as antipattern since it disables project wide Automatic Static Optimization.
     if (process.env.NODE_ENV === 'development') {
         if (inAppContext) {
             console.warn(
@@ -31,20 +21,14 @@ export const initOnContext = ctx => {
         }
     }
 
-    // Initialize ApolloClient if not already done
     const apolloClient =
         ctx.apolloClient ||
         initApolloClient(ctx.apolloState || {}, inAppContext ? ctx.ctx : ctx);
 
-    // To avoid calling initApollo() twice in the server we send the Apollo Client as a prop
-    // to the component, otherwise the component would have to call initApollo() again but this
-    // time without the context, once that happens the following code will make sure we send
-    // the prop as `null` to the browser
+
     apolloClient.toJSON = () => null;
 
-    // Add apolloClient to NextPageContext & NextAppContext
-    // This allows us to consume the apolloClient inside our
-    // custom `getInitialProps({ apolloClient })`.
+
     ctx.apolloClient = apolloClient;
     if (inAppContext) {
         ctx.ctx.apolloClient = apolloClient;

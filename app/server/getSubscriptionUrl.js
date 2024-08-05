@@ -3,10 +3,10 @@
  */
 const getSubscriptionUrl = async (ctx, accessToken, shop) => {
   const query = JSON.stringify({
-      query: `mutation {
+    query: `mutation {
       appSubscriptionCreate(
           name: "Super Duper Plan"
-          returnUrl: "https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}/"
+          returnUrl: "https://${shop}/admin/apps/${process.env.CLIENT_ID}/"
           test: true
           lineItems: [
           {
@@ -40,12 +40,12 @@ const getSubscriptionUrl = async (ctx, accessToken, shop) => {
 
   const apiVersion = process.env.API_VERSION;
   const response = await fetch(`https://${shop}/admin/api/${apiVersion}/graphql.json`, {
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/json',
-          "X-Shopify-Access-Token": accessToken,
-      },
-      body: query
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      "X-Shopify-Access-Token": accessToken,
+    },
+    body: query
   })
 
   const responseJson = await response.json();
